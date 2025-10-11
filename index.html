@@ -1,0 +1,821 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Circular Board Game - FIXED</title>
+<style>
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 20px;
+}
+
+.game-container {
+  background: white;
+  padding: 30px;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+  display: flex;
+  flex-direction: row; 
+  align-items: flex-start;
+  gap: 30px;
+  max-width: 1400px;
+}
+
+.board {
+  position: relative;
+  width: 700px;
+  height: 700px;
+  background: #ffffff;
+}
+
+.center {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 120px;
+  height: 120px;
+  border: 4px solid #d93025;
+  border-radius: 50%;
+  background: #f9eaea;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  font-weight: 700;
+  color: #d93025;
+  font-size: 16px;
+  text-align: center;
+  z-index: 10;
+}
+
+.ring {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  border: 2px dashed #ccc;
+  z-index: 1;
+}
+
+.circle {
+  position: absolute;
+  border-radius: 50%;
+  border: 1px solid rgba(0, 0, 0, 0.4);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  z-index: 5;
+}
+
+.cardinal-circle {
+  border-width: 2px;
+  border-color: #333;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
+
+.player-token {
+  position: absolute;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 3px solid white;
+  box-shadow: 0 0 8px rgba(0,0,0,0.5);
+  transition: all 0.2s ease-out; 
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 14px;
+  color: white;
+}
+
+.p1 { background: linear-gradient(135deg, #1a73e8 0%, #0d47a1 100%); }
+.p2 { background: linear-gradient(135deg, #1e8e3e 0%, #0d5e23 100%); }
+.p3 { background: linear-gradient(135deg, #d93025 0%, #a02015 100%); }
+.p4 { background: linear-gradient(135deg, #f9ab00 0%, #c17900 100%); }
+
+.info-panel {
+  padding: 20px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  background-color: #f9f9f9;
+  width: 400px;
+}
+
+.dice-container {
+  display: flex;
+  justify-content: space-around;
+  margin: 15px 0;
+  gap: 10px;
+}
+
+.die-wrapper {
+  text-align: center;
+  width: 50%;
+}
+
+.die-3d {
+  width: 60px;
+  height: 60px;
+  position: relative;
+  transform-style: preserve-3d;
+  transition: transform 0.6s;
+  margin: 0 auto 10px;
+}
+
+.die-face {
+  position: absolute;
+  width: 60px;
+  height: 60px;
+  background: white;
+  border: 2px solid #333;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  font-weight: bold;
+  box-shadow: inset 0 0 8px rgba(0,0,0,0.1);
+}
+
+.die-face-1 { transform: rotateY(0deg) translateZ(30px); }
+.die-face-2 { transform: rotateY(90deg) translateZ(30px); }
+.die-face-3 { transform: rotateY(180deg) translateZ(30px); }
+.die-face-4 { transform: rotateY(-90deg) translateZ(30px); }
+.die-face-5 { transform: rotateX(90deg) translateZ(30px); }
+.die-face-6 { transform: rotateX(-90deg) translateZ(30px); }
+
+.roll-button {
+  padding: 12px 30px;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+  background-color: #1a73e8;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  box-shadow: 0 4px #0f4d9b;
+  transition: all 0.1s;
+  margin: 15px auto 0;
+  display: block;
+  width: 100%;
+}
+
+.roll-button:active {
+  background-color: #0f4d9b;
+  box-shadow: 0 2px #0f4d9b;
+  transform: translateY(2px);
+}
+
+.roll-button:disabled {
+  background-color: #ccc;
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+.status-info {
+  margin: 10px 0;
+  padding: 10px;
+  background: white;
+  border-radius: 5px;
+  font-size: 16px;
+}
+
+.player-turn {
+  font-weight: bold;
+  font-size: 20px;
+}
+
+.angle-options {
+  margin: 20px 0;
+  padding: 15px;
+  background: white;
+  border-radius: 8px;
+  border: 2px solid #1a73e8;
+}
+
+.angle-option {
+  display: block;
+  margin: 8px 0;
+  padding: 8px 15px;
+  background: #f0f0f0;
+  border: 2px solid #ddd;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: left;
+}
+
+.angle-option:hover {
+  background: #e3f2fd;
+  border-color: #1a73e8;
+  transform: scale(1.02);
+}
+
+.angle-option.selected {
+  background: #1a73e8;
+  color: white;
+  border-color: #0d47a1;
+}
+
+.controls-info {
+  margin-top: 15px;
+  padding: 10px;
+  background: #fff3cd;
+  border: 1px solid #ffc107;
+  border-radius: 5px;
+  font-size: 14px;
+}
+
+.k-result {
+  font-size: 20px;
+  color: #00a651;
+  font-weight: bold;
+  padding: 8px;
+  background: #e8f5e9;
+  border-radius: 5px;
+  margin: 10px 0;
+  text-align: center;
+}
+
+#winBanner {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.9);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    z-index: 100;
+    font-size: 40px;
+    font-weight: bold;
+    color: #d93025;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+    border-radius: 12px;
+}
+
+.rules-section {
+    margin-top: 20px;
+    padding: 15px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    background: #fff;
+}
+
+.rules-toggle {
+    font-size: 18px;
+    font-weight: bold;
+    cursor: pointer;
+    color: #1a73e8;
+    margin-bottom: 10px;
+}
+
+.rules-list {
+    list-style-type: none;
+    padding-left: 0;
+}
+
+.rules-list li {
+    margin-bottom: 8px;
+    padding-left: 15px;
+    position: relative;
+    line-height: 1.4;
+    font-size: 15px;
+}
+
+.rules-list li::before {
+    content: "•";
+    color: #d93025;
+    font-weight: bold;
+    display: inline-block;
+    width: 1em;
+    margin-left: -1em;
+}
+
+</style>
+</head>
+<body>
+<div class="game-container">
+  
+  <div class="board" id="board">
+    <div class="center">
+      <span style="font-size: 20px;">🏁</span><br>
+      FINISH
+    </div>
+  </div>
+
+  <div class="info-panel">
+    <h1>Trig Game Controls</h1>
+    
+    <div class="status-info">
+      <div>Current Turn: <span id="currentPlayer" class="player-turn">Player 1 (Blue)</span></div>
+      <div id="playerPositions" style="margin-top: 10px; font-size: 14px;"></div>
+    </div>
+
+    <div class="dice-container">
+      <div class="die-wrapper">
+        <div class="die-3d" id="dieA">
+          <div class="die-face die-face-1">1</div>
+          <div class="die-face die-face-2">√2</div>
+          <div class="die-face die-face-3">√3</div>
+          <div class="die-face die-face-4">-1</div>
+          <div class="die-face die-face-5">-√2</div>
+          <div class="die-face die-face-6">-√3</div>
+        </div>
+        <div><strong>Die A:</strong> <span id="dieAResult">--</span></div>
+      </div>
+
+      <div class="die-wrapper">
+        <div class="die-3d" id="dieB">
+          <div class="die-face die-face-1">1</div>
+          <div class="die-face die-face-2">2</div>
+          <div class="die-face die-face-3">3</div>
+          <div class="die-face die-face-4">-1</div>
+          <div class="die-face die-face-5">-2</div>
+          <div class="die-face die-face-6">-3</div>
+        </div>
+        <div><strong>Die B:</strong> <span id="dieBResult">--</span></div>
+      </div>
+    </div>
+
+    <div class="k-result" id="kResult">k = A/B = ?</div>
+
+    <button class="roll-button" id="rollButton">Roll Dice (Space)</button>
+
+    <div id="angleOptionsContainer" style="display: none;">
+      <div class="angle-options">
+        <h3>Choose angle to move:</h3>
+        <div id="angleOptions"></div>
+      </div>
+    </div>
+
+    <div class="controls-info">
+      <strong>Controls:</strong> Press <kbd>SPACE</kbd> to roll dice | Press <kbd>1-9</kbd> to select angle
+    </div>
+
+    <div id="messageBox" style="margin-top: 15px; padding: 10px; background: #e3f2fd; border-radius: 5px; display: none;"></div>
+    
+    <div class="rules-section">
+        <div class="rules-toggle" id="rules-toggle">
+            📜 GAME RULES (Click to Toggle)
+        </div>
+        <div id="rules-content" style="display: none;">
+            <ol class="rules-list">
+                <li>Player order is determined by drawing lots.</li>
+                <li>Each player places their coin on their respective starting point on the board.</li>
+                <li>Roll the dice to get D<sub>A</sub> and D<sub>B</sub> values.</li>
+                <li>Calculate ratio <strong>k = D<sub>A</sub> / D<sub>B</sub></strong>.</li>
+                <li>Choose one angle θ such that:
+                    <ul style="margin-left: 20px; margin-top: 5px;">
+                        <li>0° &lt; θ ≤ 360°</li>
+                        <li>Any of the six trigonometric functions f(θ) = k</li>
+                        <li>θ should be a multiple of 15° (θ = 15n)</li>
+                    </ul>
+                </li>
+                <li>New position = Current position - θ <strong>(Anti-Clockwise)</strong>.</li>
+                <li>If the new angle reaches the player's <strong>initial starting position</strong> (0° for Blue, 90° for Green, 180° for Red, 270° for Yellow), the player has successfully completed the layer. The player moves their token to the <strong>next inner layer</strong> at their <strong>same starting position</strong> on the new layer.</li>
+                <li>If new angle θ &lt; 0°, loop around the layer (add 360°).</li>
+                <li>The first player to reach the <strong>Finishing Point</strong> (by achieving 0°/360° on the final ring) wins the game.</li>
+            </ol>
+        </div>
+    </div>
+    </div>
+</div>
+<div id="winBanner" style="display: none;"></div>
+
+<script>
+const board = document.getElementById('board');
+const centerX = 350;
+const centerY = 350;
+
+const dieA_Display = ['1', '√2', '√3', '-1', '-√2', '-√3'];
+const dieA_Values = [1, Math.sqrt(2), Math.sqrt(3), -1, -Math.sqrt(2), -Math.sqrt(3)];
+const dieA_Radicand = [1, 2, 3, 1, 2, 3]; 
+const dieA_Sign = [1, 1, 1, -1, -1, -1]; 
+const dieB = [1, 2, 3, -1, -2, -3];
+
+let currentPlayerIndex = 0;
+let gameState = 'WAITING_FOR_ROLL'; 
+let currentAngleOptions = [];
+
+const rings = [
+  { radius: 320, circleSize: 30 },
+  { radius: 260, circleSize: 26 },
+  { radius: 200, circleSize: 22 },
+  { radius: 140, circleSize: 18 },
+  { radius: 85, circleSize: 16 }
+];
+
+const cardinalColors = {
+  0: '#1a73e8', 6: '#1e8e3e', 12: '#d93025', 18: '#f9ab00'
+};
+
+const regularColor = '#7030a0';
+const circlesPerRing = 24;
+const cardinalPositions = [0, 6, 12, 18];
+
+const players = [
+  { id: 1, name: 'P1', class: 'p1', color: 'Blue', startCircle: 0, currentPos: { ring: 0, circle: 0 } },
+  { id: 2, name: 'P2', class: 'p2', color: 'Green', startCircle: 6, currentPos: { ring: 0, circle: 6 } },
+  { id: 3, name: 'P3', class: 'p3', color: 'Red', startCircle: 12, currentPos: { ring: 0, circle: 12 } },
+  { id: 4, name: 'P4', class: 'p4', color: 'Yellow', startCircle: 18, currentPos: { ring: 0, circle: 18 } }
+];
+
+const TRIG_VALUES = [
+  { val: 0, symbol: '0' },
+  { val: 0.5, symbol: '1/2' }, 
+  { val: Math.sqrt(2) / 2, symbol: '√2/2' }, 
+  { val: Math.sqrt(3) / 2, symbol: '√3/2' }, 
+  { val: 1, symbol: '1' }, 
+  { val: Math.sqrt(3), symbol: '√3' }, 
+  { val: 1 / Math.sqrt(3), symbol: '1/√3' }, 
+  { val: 2, symbol: '2' }, 
+  { val: Math.sqrt(2), symbol: '√2' }, 
+  { val: 2 / Math.sqrt(3), symbol: '2/√3' }, 
+];
+
+function simplifyK(rollA_index, rollB) {
+    const A_sign = dieA_Sign[rollA_index];
+    const A_radicand = dieA_Radicand[rollA_index];
+    const B_sign = Math.sign(rollB);
+    const B_value = Math.abs(rollB);
+    
+    const k_sign = A_sign * B_sign;
+    const sign_str = k_sign === -1 ? '-' : '';
+
+    if (A_radicand === 1) {
+        return `${sign_str}1/${B_value}`;
+    }
+
+    if (B_value === 1) {
+        return `${sign_str}√${A_radicand}`;
+    }
+    
+    if (A_radicand === B_value) {
+        return `${sign_str}1/√${A_radicand}`;
+    }
+
+    return `${sign_str}√${A_radicand}/${B_value}`;
+}
+
+function findValidAngles(k) {
+  const absK = Math.abs(k);
+  const kSymbolic = TRIG_VALUES.find(r => Math.abs(absK - r.val) < 0.001);
+  if (!kSymbolic) return [];
+
+  const validAngles = [];
+  const functions = ['sin', 'cos', 'tan', 'csc', 'sec', 'cot'];
+  
+  for (let deg = 15; deg <= 360; deg += 15) { 
+    const rad = deg * Math.PI / 180;
+    const vals = {
+      sin: Math.sin(rad),
+      cos: Math.cos(rad),
+      tan: Math.tan(rad),
+      csc: 1/Math.sin(rad),
+      sec: 1/Math.cos(rad),
+      cot: 1/Math.tan(rad)
+    };
+
+    for (const func of functions) {
+      let val = vals[func];
+      if (Math.abs(val) < 1e-9) val = 0; 
+      if (Math.abs(val) > 1e9) continue; 
+      
+      if (Math.abs(val - k) < 0.001) {
+        const movement = deg / 15;
+        const isDuplicate = validAngles.some(a => a.deg === deg && a.func === func);
+        if (!isDuplicate) {
+             validAngles.push({ 
+                deg, 
+                positions: movement, 
+                func: func, 
+                sym: k < 0 ? `-${kSymbolic.symbol}` : kSymbolic.symbol 
+            });
+        }
+      }
+    }
+  }
+  
+  return validAngles;
+}
+
+function rollDice() {
+  if (gameState !== 'WAITING_FOR_ROLL') return;
+  if (document.getElementById('winBanner').style.display !== 'none') return;
+
+  gameState = 'ROLLING';
+  document.getElementById('rollButton').disabled = true;
+  document.getElementById('angleOptionsContainer').style.display = 'none';
+  showMessage('Rolling dice...');
+  
+  const rollA_Index = Math.floor(Math.random() * 6);
+  const rollB_Index = Math.floor(Math.random() * 6);
+  
+  animateDice(rollA_Index, rollB_Index, () => {
+    const rollA = dieA_Values[rollA_Index];
+    const rollB = dieB[rollB_Index];
+    const k = rollA / rollB;
+    
+    const kSymbolic = simplifyK(rollA_Index, rollB);
+    
+    document.getElementById('dieAResult').innerHTML = dieA_Display[rollA_Index];
+    document.getElementById('dieBResult').textContent = dieB[rollB_Index];
+    document.getElementById('kResult').innerHTML = `k = A/B = ${kSymbolic}`;
+    
+    const validAngles = findValidAngles(k);
+    
+    if (validAngles.length === 0) {
+      showMessage(`❌ No valid angles found for k = ${kSymbolic}. Turn skipped.`);
+      setTimeout(nextPlayer, 2000);
+    } else {
+      currentAngleOptions = validAngles;
+      displayAngleOptions(validAngles);
+      gameState = 'CHOOSING_ANGLE';
+      showMessage(`✅ Choose an angle to move (1-${Math.min(validAngles.length, 9)})`);
+    }
+  });
+}
+
+function animateHop(player, stepsRemaining, finalRing, finalCircle) {
+    if (stepsRemaining > 0) {
+        let nextCircle = player.currentPos.circle - 1; 
+        if (nextCircle < 0) nextCircle = circlesPerRing - 1;
+        
+        player.currentPos.circle = nextCircle;
+        renderTokenPosition(player);
+        
+        setTimeout(() => {
+            animateHop(player, stepsRemaining - 1, finalRing, finalCircle);
+        }, 200); 
+    } else {
+        if (finalRing !== player.currentPos.ring) {
+            player.currentPos.ring = finalRing;
+            player.currentPos.circle = finalCircle;
+        } else {
+            player.currentPos.circle = finalCircle;
+        }
+
+        renderTokenPosition(player); 
+        setTimeout(nextPlayer, 500); 
+    }
+}
+
+function selectAngle(index) {
+  if (gameState !== 'CHOOSING_ANGLE' || index >= currentAngleOptions.length) return;
+  if (document.getElementById('winBanner').style.display !== 'none') return;
+
+  const angle = currentAngleOptions[index];
+  const currentPlayer = players[currentPlayerIndex];
+  
+  document.querySelectorAll('.angle-option').forEach((el, i) => {
+    el.classList.toggle('selected', i === index);
+  });
+  
+  const moveSteps = angle.positions;
+  const currentPosIndex = currentPlayer.currentPos.circle;
+  const currentPosDeg = currentPosIndex * 15;
+  const moveDeg = angle.deg;
+  
+  const newPosDeg = currentPosDeg - moveDeg; 
+
+  let finalRing = currentPlayer.currentPos.ring;
+  let finalCircle = (currentPosIndex - moveSteps) % circlesPerRing;
+  if (finalCircle < 0) finalCircle += circlesPerRing;
+
+  // Check if player returned to their starting position (completed 360 degrees)
+  const normalizedNewDeg = ((newPosDeg % 360) + 360) % 360;
+  const playerStartDeg = currentPlayer.startCircle * 15;
+  
+  // Layer completion: player returns to their INITIAL starting position angle
+  if (normalizedNewDeg === playerStartDeg && currentPlayer.currentPos.ring >= 0) { 
+      if (currentPlayer.currentPos.ring < rings.length - 1) {
+          // Move to next inner ring at the same starting position
+          finalRing = currentPlayer.currentPos.ring + 1;
+          finalCircle = currentPlayer.startCircle; // Use their original starting position
+          showMessage(`🎉 ${currentPlayer.name} completed the layer! Moving to Ring ${finalRing + 1} at ${playerStartDeg}°!`);
+      } else {
+          // Win condition: completed final ring
+          showWin(currentPlayer);
+          return;
+      }
+  }
+
+  showMessage(`🚀 ${currentPlayer.name} moves ${moveSteps} positions anti-clockwise...`);
+  animateHop(currentPlayer, moveSteps, finalRing, finalCircle);
+}
+
+function showWin(player) {
+  gameState = 'GAME_OVER';
+  document.getElementById('rollButton').disabled = true;
+  const banner = document.getElementById('winBanner');
+  banner.innerHTML = `🏆 ${player.name} WINS! 🏆`;
+  banner.style.color = cardinalColors[player.startCircle];
+  banner.style.display = 'flex';
+  showMessage(`GAME OVER! ${player.name} is the winner.`);
+}
+
+function nextPlayer() {
+  if (gameState === 'GAME_OVER') return;
+  
+  document.getElementById('angleOptionsContainer').style.display = 'none';
+  currentAngleOptions = [];
+  
+  currentPlayerIndex = (currentPlayerIndex + 1) % players.length;
+  gameState = 'WAITING_FOR_ROLL';
+  document.getElementById('rollButton').disabled = false;
+  updatePlayerTurn();
+  showMessage(`It's ${players[currentPlayerIndex].name}'s turn. Roll the dice!`);
+  renderBoard();
+}
+
+function updatePlayerTurn() {
+  const player = players[currentPlayerIndex];
+  document.getElementById('currentPlayer').innerHTML = `Player ${player.id} (<span style="color: ${cardinalColors[player.startCircle]}">${player.color}</span>)`;
+}
+
+function showMessage(msg) {
+  const box = document.getElementById('messageBox');
+  box.innerHTML = msg;
+  box.style.display = 'block';
+}
+
+function renderTokenPosition(player) {
+    const token = document.getElementById(`token-${player.id}`);
+    if (!token) return;
+
+    const { ring, circle } = player.currentPos;
+    const currentRing = rings[ring];
+    
+    const angle = (circle / circlesPerRing) * 2 * Math.PI;
+    
+    const x = centerX + currentRing.radius * Math.cos(angle);
+    const y = centerY + currentRing.radius * Math.sin(angle);
+    
+    const tokenSize = 28;
+    token.style.left = (x - tokenSize / 2) + 'px';
+    token.style.top = (y - tokenSize / 2) + 'px';
+    
+    updatePlayerPositions(); 
+}
+
+function animateDice(indexA, indexB, callback) {
+  const dieA = document.getElementById('dieA');
+  const dieB = document.getElementById('dieB');
+  
+  let count = 0;
+  const interval = setInterval(() => {
+    const randX = Math.random() * 720 - 360;
+    const randY = Math.random() * 720 - 360;
+    dieA.style.transform = `rotateX(${randX}deg) rotateY(${randY}deg)`;
+    dieB.style.transform = `rotateX(${randX}deg) rotateY(${randY}deg)`;
+    
+    count++;
+    if (count > 15) {
+      clearInterval(interval);
+      
+      // Rotations matching die-face CSS transforms
+      // die-face-1: rotateY(0deg) translateZ(30px) - Front
+      // die-face-2: rotateY(90deg) translateZ(30px) - Right  
+      // die-face-3: rotateY(180deg) translateZ(30px) - Back
+      // die-face-4: rotateY(-90deg) translateZ(30px) - Left
+      // die-face-5: rotateX(90deg) translateZ(30px) - Top
+      // die-face-6: rotateX(-90deg) translateZ(30px) - Bottom
+      const rotations = [
+        'rotateY(0deg) rotateX(0deg)',      // Index 0 -> Face 1
+        'rotateY(-90deg) rotateX(0deg)',    // Index 1 -> Face 2
+        'rotateY(-180deg) rotateX(0deg)',   // Index 2 -> Face 3
+        'rotateY(90deg) rotateX(0deg)',     // Index 3 -> Face 4
+        'rotateX(-90deg) rotateY(0deg)',    // Index 4 -> Face 5
+        'rotateX(90deg) rotateY(0deg)'      // Index 5 -> Face 6
+      ];
+      
+      dieA.style.transform = rotations[indexA];
+      dieB.style.transform = rotations[indexB];
+      
+      setTimeout(callback, 500);
+    }
+  }, 80);
+}
+
+function displayAngleOptions(angles) {
+  const container = document.getElementById('angleOptions');
+  container.innerHTML = '';
+  
+  angles.forEach((angle, idx) => {
+    if (idx < 9) {
+      const div = document.createElement('div');
+      div.className = 'angle-option';
+      const absPos = Math.abs(angle.positions);
+      div.innerHTML = `<strong>${idx + 1}:</strong> ${angle.func}(${angle.deg}°) = ${angle.sym} → Move ${absPos} position${absPos !== 1 ? 's' : ''}`;
+      div.onclick = () => selectAngle(idx);
+      container.appendChild(div);
+    }
+  });
+  
+  document.getElementById('angleOptionsContainer').style.display = 'block';
+}
+
+function getColorForPosition(position) {
+  return cardinalColors.hasOwnProperty(position) ? cardinalColors[position] : regularColor;
+}
+
+function renderBoard() {
+  board.querySelectorAll('.ring, .circle').forEach(el => el.remove());
+  
+  const center = document.querySelector('.center');
+  if (center) board.appendChild(center);
+
+  rings.forEach((ring, ringIndex) => {
+    const ringElement = document.createElement('div');
+    ringElement.className = 'ring';
+    ringElement.style.width = (ring.radius * 2) + 'px';
+    ringElement.style.height = (ring.radius * 2) + 'px';
+    board.appendChild(ringElement);
+    
+    for (let i = 0; i < circlesPerRing; i++) {
+      const angle = (i / circlesPerRing) * 2 * Math.PI;
+      const x = centerX + ring.radius * Math.cos(angle);
+      const y = centerY + ring.radius * Math.sin(angle);
+      
+      const isCardinal = cardinalPositions.includes(i);
+      const circleColor = getColorForPosition(i);
+      
+      const circle = document.createElement('div');
+      circle.className = 'circle';
+      if (isCardinal) circle.classList.add('cardinal-circle');
+
+      circle.style.width = ring.circleSize + 'px';
+      circle.style.height = ring.circleSize + 'px';
+      circle.style.left = (x - ring.circleSize / 2) + 'px';
+      circle.style.top = (y - ring.circleSize / 2) + 'px';
+      circle.style.backgroundColor = circleColor;
+      
+      board.appendChild(circle);
+    }
+  });
+  
+  players.forEach(player => {
+    let token = document.getElementById(`token-${player.id}`);
+    
+    if (!token) {
+        token = document.createElement('div');
+        token.className = `player-token ${player.class}`;
+        token.id = `token-${player.id}`;
+        token.textContent = player.id;
+        board.appendChild(token);
+    }
+    
+    renderTokenPosition(player);
+  });
+
+  updatePlayerPositions();
+}
+
+function updatePlayerPositions() {
+  const posStrings = players.map(p =>
+    `<span style="color: ${cardinalColors[p.startCircle]}; font-weight: bold;">${p.name}</span>: R${p.currentPos.ring + 1}, P${p.currentPos.circle * 15}° (${p.currentPos.circle})`
+  );
+  document.getElementById('playerPositions').innerHTML = posStrings.join(' | ');
+}
+
+document.addEventListener('keydown', (e) => {
+  if (e.code === 'Space' && gameState === 'WAITING_FOR_ROLL') {
+    e.preventDefault();
+    rollDice();
+  } else if (gameState === 'CHOOSING_ANGLE') {
+    const num = parseInt(e.key);
+    if (num >= 1 && num <= currentAngleOptions.length && num <= 9) {
+      selectAngle(num - 1);
+    }
+  }
+});
+
+document.getElementById('rollButton').onclick = rollDice;
+document.getElementById('rules-toggle').onclick = function() {
+    const content = document.getElementById('rules-content');
+    content.style.display = content.style.display === 'none' ? 'block' : 'none';
+};
+
+renderBoard();
+updatePlayerTurn();
+showMessage('Welcome! Press SPACE or the Roll Dice button to begin.');
+</script>
+</body>
+</html>
