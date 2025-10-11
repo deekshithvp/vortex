@@ -31,6 +31,7 @@ body {
   align-items: flex-start;
   gap: 30px;
   max-width: 1400px;
+  width: 100%;
 }
 
 .board {
@@ -38,6 +39,177 @@ body {
   width: 700px;
   height: 700px;
   background: #ffffff;
+  flex-shrink: 0;
+}
+
+@media (max-width: 1200px) {
+  .game-container {
+    flex-direction: column;
+    align-items: center;
+    padding: 20px;
+  }
+  
+  .board {
+    width: min(700px, 90vw);
+    height: min(700px, 90vw);
+  }
+  
+  .info-panel {
+    width: 100% !important;
+    max-width: 600px;
+  }
+}
+
+@media (max-width: 768px) {
+  body {
+    padding: 10px;
+  }
+  
+  .game-container {
+    padding: 15px;
+    gap: 20px;
+  }
+  
+  .board {
+    width: min(500px, 95vw);
+    height: min(500px, 95vw);
+  }
+  
+  .info-panel {
+    padding: 15px;
+  }
+  
+  .status-info {
+    font-size: 14px;
+  }
+  
+  .player-turn {
+    font-size: 18px;
+  }
+  
+  .dice-container {
+    flex-direction: row;
+    gap: 10px;
+  }
+  
+  .die-wrapper {
+    width: 48%;
+  }
+  
+  .die-3d {
+    width: 50px;
+    height: 50px;
+  }
+  
+  .die-face {
+    width: 50px;
+    height: 50px;
+    font-size: 14px;
+  }
+  
+  .die-face-1 { transform: rotateY(0deg) translateZ(25px); }
+  .die-face-2 { transform: rotateY(90deg) translateZ(25px); }
+  .die-face-3 { transform: rotateY(180deg) translateZ(25px); }
+  .die-face-4 { transform: rotateY(-90deg) translateZ(25px); }
+  .die-face-5 { transform: rotateX(90deg) translateZ(25px); }
+  .die-face-6 { transform: rotateX(-90deg) translateZ(25px); }
+  
+  .k-result {
+    font-size: 18px;
+  }
+  
+  .angle-option {
+    padding: 6px 12px;
+    font-size: 14px;
+  }
+  
+  .controls-info {
+    font-size: 13px;
+  }
+  
+  h1 {
+    font-size: 22px;
+  }
+}
+
+@media (max-width: 480px) {
+  .game-container {
+    padding: 10px;
+  }
+  
+  .board {
+    width: min(350px, 95vw);
+    height: min(350px, 95vw);
+  }
+  
+  .center {
+    width: 80px;
+    height: 80px;
+    font-size: 12px;
+  }
+  
+  .center span {
+    font-size: 16px !important;
+  }
+  
+  .player-token {
+    width: 22px;
+    height: 22px;
+    font-size: 12px;
+  }
+  
+  .dice-container {
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  .die-wrapper {
+    width: 100%;
+  }
+  
+  .die-3d {
+    width: 45px;
+    height: 45px;
+  }
+  
+  .die-face {
+    width: 45px;
+    height: 45px;
+    font-size: 12px;
+  }
+  
+  .die-face-1 { transform: rotateY(0deg) translateZ(22.5px); }
+  .die-face-2 { transform: rotateY(90deg) translateZ(22.5px); }
+  .die-face-3 { transform: rotateY(180deg) translateZ(22.5px); }
+  .die-face-4 { transform: rotateY(-90deg) translateZ(22.5px); }
+  .die-face-5 { transform: rotateX(90deg) translateZ(22.5px); }
+  .die-face-6 { transform: rotateX(-90deg) translateZ(22.5px); }
+  
+  h1 {
+    font-size: 20px;
+  }
+  
+  .k-result {
+    font-size: 16px;
+  }
+  
+  .roll-button {
+    padding: 10px 20px;
+    font-size: 14px;
+  }
+  
+  #winBanner {
+    font-size: 28px;
+  }
+  
+  .rules-list li {
+    font-size: 13px;
+  }
+  
+  #playerPositions {
+    font-size: 11px !important;
+    line-height: 1.4;
+  }
 }
 
 .center {
@@ -401,8 +573,21 @@ body {
 
 <script>
 const board = document.getElementById('board');
-const centerX = 350;
-const centerY = 350;
+let boardSize = 700;
+let centerX = 350;
+let centerY = 350;
+
+function updateBoardSize() {
+  const boardElement = document.getElementById('board');
+  boardSize = boardElement.offsetWidth;
+  centerX = boardSize / 2;
+  centerY = boardSize / 2;
+}
+
+window.addEventListener('resize', () => {
+  updateBoardSize();
+  renderBoard();
+});
 
 const dieA_Display = ['1', '√2', '√3', '-1', '-√2', '-√3'];
 const dieA_Values = [1, Math.sqrt(2), Math.sqrt(3), -1, -Math.sqrt(2), -Math.sqrt(3)];
@@ -414,13 +599,16 @@ let currentPlayerIndex = 0;
 let gameState = 'WAITING_FOR_ROLL'; 
 let currentAngleOptions = [];
 
-const rings = [
-  { radius: 320, circleSize: 30 },
-  { radius: 260, circleSize: 26 },
-  { radius: 200, circleSize: 22 },
-  { radius: 140, circleSize: 18 },
-  { radius: 85, circleSize: 16 }
-];
+function getRings() {
+  const scale = boardSize / 700;
+  return [
+    { radius: 320 * scale, circleSize: 30 * scale },
+    { radius: 260 * scale, circleSize: 26 * scale },
+    { radius: 200 * scale, circleSize: 22 * scale },
+    { radius: 140 * scale, circleSize: 18 * scale },
+    { radius: 85 * scale, circleSize: 16 * scale }
+  ];
+}
 
 const cardinalColors = {
   0: '#1a73e8', 6: '#1e8e3e', 12: '#d93025', 18: '#f9ab00'
@@ -599,19 +787,17 @@ function selectAngle(index) {
   let finalCircle = (currentPosIndex - moveSteps) % circlesPerRing;
   if (finalCircle < 0) finalCircle += circlesPerRing;
 
-  // Check if player returned to their starting position (completed 360 degrees)
   const normalizedNewDeg = ((newPosDeg % 360) + 360) % 360;
   const playerStartDeg = currentPlayer.startCircle * 15;
   
-  // Layer completion: player returns to their INITIAL starting position angle
+  const rings = getRings();
+  
   if (normalizedNewDeg === playerStartDeg && currentPlayer.currentPos.ring >= 0) { 
       if (currentPlayer.currentPos.ring < rings.length - 1) {
-          // Move to next inner ring at the same starting position
           finalRing = currentPlayer.currentPos.ring + 1;
-          finalCircle = currentPlayer.startCircle; // Use their original starting position
+          finalCircle = currentPlayer.startCircle;
           showMessage(`🎉 ${currentPlayer.name} completed the layer! Moving to Ring ${finalRing + 1} at ${playerStartDeg}°!`);
       } else {
-          // Win condition: completed final ring
           showWin(currentPlayer);
           return;
       }
@@ -661,6 +847,7 @@ function renderTokenPosition(player) {
     if (!token) return;
 
     const { ring, circle } = player.currentPos;
+    const rings = getRings();
     const currentRing = rings[ring];
     
     const angle = (circle / circlesPerRing) * 2 * Math.PI;
@@ -668,9 +855,14 @@ function renderTokenPosition(player) {
     const x = centerX + currentRing.radius * Math.cos(angle);
     const y = centerY + currentRing.radius * Math.sin(angle);
     
-    const tokenSize = 28;
+    const scale = boardSize / 700;
+    const tokenSize = 28 * scale;
+    token.style.width = tokenSize + 'px';
+    token.style.height = tokenSize + 'px';
     token.style.left = (x - tokenSize / 2) + 'px';
     token.style.top = (y - tokenSize / 2) + 'px';
+    token.style.fontSize = (14 * scale) + 'px';
+    token.style.borderWidth = (3 * scale) + 'px';
     
     updatePlayerPositions(); 
 }
@@ -740,8 +932,18 @@ function renderBoard() {
   board.querySelectorAll('.ring, .circle').forEach(el => el.remove());
   
   const center = document.querySelector('.center');
-  if (center) board.appendChild(center);
+  if (center) {
+    board.appendChild(center);
+    const scale = boardSize / 700;
+    const centerSize = 120 * scale;
+    center.style.width = centerSize + 'px';
+    center.style.height = centerSize + 'px';
+    center.style.fontSize = (16 * scale) + 'px';
+    center.style.borderWidth = (4 * scale) + 'px';
+  }
 
+  const rings = getRings();
+  
   rings.forEach((ring, ringIndex) => {
     const ringElement = document.createElement('div');
     ringElement.className = 'ring';
@@ -813,6 +1015,7 @@ document.getElementById('rules-toggle').onclick = function() {
     content.style.display = content.style.display === 'none' ? 'block' : 'none';
 };
 
+updateBoardSize();
 renderBoard();
 updatePlayerTurn();
 showMessage('Welcome! Press SPACE or the Roll Dice button to begin.');
