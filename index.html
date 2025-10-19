@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Circular Board Game - FIXED</title>
+<title>Vortex </title>
 <style>
 * {
   margin: 0;
@@ -560,10 +560,12 @@ body {
                         <li>θ should be a multiple of 15° (θ = 15n)</li>
                     </ul>
                 </li>
-                <li>New position = Current position - θ <strong>(Anti-Clockwise)</strong>.</li>
-                <li>If the new angle reaches the player's <strong>initial starting position</strong> (0° for Blue, 90° for Green, 180° for Red, 270° for Yellow), the player has successfully completed the layer. The player moves their token to the <strong>next inner layer</strong> at their <strong>same starting position</strong> on the new layer.</li>
-                <li>If new angle θ &lt; 0°, loop around the layer (add 360°).</li>
-                <li>The first player to reach the <strong>Finishing Point</strong> (by achieving 0°/360° on the final ring) wins the game.</li>
+                <li>New position = Current position - θ <strong>(Anti-Clockwise)</strong> if k is positive, or Current position + θ <strong>(Clockwise)</strong> if k is negative.</li>
+                <li><strong>Safe Squares:</strong> Players at 0°, 90°, 180°, or 270° (cardinal positions) cannot be captured.</li>
+                <li>If a player lands exactly on another player's position (and it's not a safe square), the opponent is captured and sent back to their starting position on the current ring.</li>
+                <li>If the new angle reaches the player's <strong>initial starting position</strong> (0° for Blue, 90° for Green, 180° for Red, 270° for Yellow) via anti-clockwise movement, the player has successfully completed the layer. The player moves their token to the <strong>next inner layer</strong> at their <strong>same starting position</strong> on the new layer.</li>
+                <li>If new angle θ &lt; 0° (anti-clockwise) or θ &gt; 360° (clockwise), loop around the layer.</li>
+                <li>The first player to reach the <strong>Finishing Point</strong> (by achieving their starting position on the final ring via anti-clockwise movement) wins the game.</li>
             </ol>
         </div>
     </div>
@@ -694,7 +696,8 @@ function findValidAngles(k) {
                 deg, 
                 positions: movement, 
                 func: func, 
-                sym: k < 0 ? `-${kSymbolic.symbol}` : kSymbolic.symbol 
+                sym: k < 0 ? `-${kSymbolic.symbol}` : kSymbolic.symbol,
+                kValue: k  // Store the actual k value to determine direction
             });
         }
       }
@@ -741,16 +744,24 @@ function rollDice() {
   });
 }
 
-function animateHop(player, stepsRemaining, finalRing, finalCircle) {
+function animateHop(player, stepsRemaining, finalRing, finalCircle, callback, isClockwise = false) {
     if (stepsRemaining > 0) {
-        let nextCircle = player.currentPos.circle - 1; 
-        if (nextCircle < 0) nextCircle = circlesPerRing - 1;
+        let nextCircle;
+        if (isClockwise) {
+            // Clockwise movement (for negative k values)
+            nextCircle = player.currentPos.circle + 1;
+            if (nextCircle >= circlesPerRing) nextCircle = 0;
+        } else {
+            // Anti-clockwise movement (normal)
+            nextCircle = player.currentPos.circle - 1; 
+            if (nextCircle < 0) nextCircle = circlesPerRing - 1;
+        }
         
         player.currentPos.circle = nextCircle;
         renderTokenPosition(player);
         
         setTimeout(() => {
-            animateHop(player, stepsRemaining - 1, finalRing, finalCircle);
+            animateHop(player, stepsRemaining - 1, finalRing, finalCircle, callback, isClockwise);
         }, 200); 
     } else {
         if (finalRing !== player.currentPos.ring) {
@@ -760,9 +771,44 @@ function animateHop(player, stepsRemaining, finalRing, finalCircle) {
             player.currentPos.circle = finalCircle;
         }
 
-        renderTokenPosition(player); 
-        setTimeout(nextPlayer, 500); 
+        renderTokenPosition(player);
+        
+        // Check for collision after move is complete
+        if (callback) callback();
     }
+}
+
+function checkAndHandleCollision(currentPlayer) {
+    // Safe positions (cardinal angles: 0°, 90°, 180°, 270°)
+    const safePositions = [0, 6, 12, 18]; // These are indices for 0°, 90°, 180°, 270°
+    
+    // If current player is on a safe position, no capture can happen
+    if (safePositions.includes(currentPlayer.currentPos.circle)) {
+        return false;
+    }
+    
+    // Check if any other player is on the same position
+    for (let otherPlayer of players) {
+        if (otherPlayer.id === currentPlayer.id) continue;
+        
+        // Check if on same ring and same circle
+        if (otherPlayer.currentPos.ring === currentPlayer.currentPos.ring &&
+            otherPlayer.currentPos.circle === currentPlayer.currentPos.circle) {
+            
+            // Send the other player back to their starting position on current ring
+            otherPlayer.currentPos.circle = otherPlayer.startCircle;
+            renderTokenPosition(otherPlayer);
+            
+            showMessage(`💥 ${currentPlayer.name} captured ${otherPlayer.name}! ${otherPlayer.name} returns to starting position on Ring ${otherPlayer.currentPos.ring + 1}!`);
+            
+            // Add a brief pause to show the capture message
+            setTimeout(() => {
+                nextPlayer();
+            }, 2000);
+            return true; // Collision occurred
+        }
+    }
+    return false; // No collision
 }
 
 function selectAngle(index) {
@@ -781,18 +827,32 @@ function selectAngle(index) {
   const currentPosDeg = currentPosIndex * 15;
   const moveDeg = angle.deg;
   
-  const newPosDeg = currentPosDeg - moveDeg; 
+  // Determine if k is negative (clockwise movement) or positive (anti-clockwise)
+  const rollA_Index = dieA_Values.findIndex(v => Math.abs(v - angle.kValue) < 0.001);
+  const kValue = angle.kValue;
+  const isClockwise = kValue < 0;
+  
+  let newPosDeg, finalCircle;
+  
+  if (isClockwise) {
+    // Clockwise movement (add angle)
+    newPosDeg = currentPosDeg + moveDeg;
+    finalCircle = (currentPosIndex + moveSteps) % circlesPerRing;
+  } else {
+    // Anti-clockwise movement (subtract angle)
+    newPosDeg = currentPosDeg - moveDeg;
+    finalCircle = (currentPosIndex - moveSteps) % circlesPerRing;
+    if (finalCircle < 0) finalCircle += circlesPerRing;
+  }
 
   let finalRing = currentPlayer.currentPos.ring;
-  let finalCircle = (currentPosIndex - moveSteps) % circlesPerRing;
-  if (finalCircle < 0) finalCircle += circlesPerRing;
-
   const normalizedNewDeg = ((newPosDeg % 360) + 360) % 360;
   const playerStartDeg = currentPlayer.startCircle * 15;
   
   const rings = getRings();
   
-  if (normalizedNewDeg === playerStartDeg && currentPlayer.currentPos.ring >= 0) { 
+  // Layer completion check (only for anti-clockwise movement)
+  if (!isClockwise && normalizedNewDeg === playerStartDeg && currentPlayer.currentPos.ring >= 0) { 
       if (currentPlayer.currentPos.ring < rings.length - 1) {
           finalRing = currentPlayer.currentPos.ring + 1;
           finalCircle = currentPlayer.startCircle;
@@ -803,8 +863,19 @@ function selectAngle(index) {
       }
   }
 
-  showMessage(`🚀 ${currentPlayer.name} moves ${moveSteps} positions anti-clockwise...`);
-  animateHop(currentPlayer, moveSteps, finalRing, finalCircle);
+  const direction = isClockwise ? '🔄 clockwise' : '🔄 anti-clockwise';
+  showMessage(`🚀 ${currentPlayer.name} moves ${moveSteps} positions ${direction}...`);
+  
+  // Use callback to check collision after animation completes
+  animateHop(currentPlayer, moveSteps, finalRing, finalCircle, () => {
+      // Check for collision
+      const collisionOccurred = checkAndHandleCollision(currentPlayer);
+      
+      // If no collision, proceed to next player normally
+      if (!collisionOccurred) {
+          setTimeout(nextPlayer, 500);
+      }
+  }, isClockwise);
 }
 
 function showWin(player) {
@@ -915,7 +986,8 @@ function displayAngleOptions(angles) {
       const div = document.createElement('div');
       div.className = 'angle-option';
       const absPos = Math.abs(angle.positions);
-      div.innerHTML = `<strong>${idx + 1}:</strong> ${angle.func}(${angle.deg}°) = ${angle.sym} → Move ${absPos} position${absPos !== 1 ? 's' : ''}`;
+      const direction = angle.kValue < 0 ? '↻ clockwise' : '↺ anti-clockwise';
+      div.innerHTML = `<strong>${idx + 1}:</strong> ${angle.func}(${angle.deg}°) = ${angle.sym} → Move ${absPos} position${absPos !== 1 ? 's' : ''} ${direction}`;
       div.onclick = () => selectAngle(idx);
       container.appendChild(div);
     }
@@ -991,10 +1063,21 @@ function renderBoard() {
 }
 
 function updatePlayerPositions() {
-  const posStrings = players.map(p =>
-    `<span style="color: ${cardinalColors[p.startCircle]}; font-weight: bold;">${p.name}</span>: R${p.currentPos.ring + 1}, P${p.currentPos.circle * 15}° (${p.currentPos.circle})`
-  );
-  document.getElementById('playerPositions').innerHTML = posStrings.join(' | ');
+  const posStrings = players.map(p => {
+    const startDeg = p.startCircle * 15;
+    const currentDeg = p.currentPos.circle * 15;
+    
+    // Calculate degrees moved from starting point (anti-clockwise)
+    let degreesMoved = startDeg - currentDeg;
+    if (degreesMoved < 0) degreesMoved += 360;
+    
+    // Calculate total progress including completed rings
+    const completedRings = p.currentPos.ring;
+    const totalDegrees = (completedRings * 360) + degreesMoved;
+    
+    return `<span style="color: ${cardinalColors[p.startCircle]}; font-weight: bold;">${p.name}</span>: Ring ${p.currentPos.ring + 1} | ${currentDeg}° | Moved: ${degreesMoved}° (Total: ${totalDegrees}°)`;
+  });
+  document.getElementById('playerPositions').innerHTML = posStrings.join('<br>');
 }
 
 document.addEventListener('keydown', (e) => {
